@@ -2,6 +2,6 @@
 name = "pathtracer"
 version = "0.1.0"
 authors = ["Stefan Kerkmann <no@reply.de>"]
-edition = "2018"
+#edition = "2018"
 
 [dependencies]

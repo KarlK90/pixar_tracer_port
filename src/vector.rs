@@ -1,13 +1,13 @@
 use std::ops::{Add, Mul, Not, Rem};
 
-#[derive(Copy, Clone)]
-struct Vec3d {
-    x: f64,
-    y: f64,
-    z: f64,
+#[derive(Copy, Clone, Default)]
+pub struct Vec3d {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
-impl Add for Vec3d {
+impl Add<Vec3d> for Vec3d {
     type Output = Vec3d;
     fn add(self, other: Vec3d) -> Self::Output {
         Vec3d {
@@ -18,13 +18,35 @@ impl Add for Vec3d {
     }
 }
 
-impl Mul for Vec3d {
+impl Add<f64> for Vec3d {
+    type Output = Vec3d;
+    fn add(self, other: f64) -> Self::Output {
+        Vec3d {
+            x: self.x + other,
+            y: self.y + other,
+            z: self.z + other,
+        }
+    }
+}
+
+impl Mul<Vec3d> for Vec3d {
     type Output = Vec3d;
     fn mul(self, other: Vec3d) -> Self::Output {
         Vec3d {
             x: self.x * other.x,
             y: self.y * other.y,
             z: self.z * other.z,
+        }
+    }
+}
+
+impl Mul<f64> for Vec3d {
+    type Output = Vec3d;
+    fn mul(self, other: f64) -> Self::Output {
+        Vec3d {
+            x: self.x * other,
+            y: self.y * other,
+            z: self.z * other,
         }
     }
 }
