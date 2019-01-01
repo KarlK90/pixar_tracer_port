@@ -20,8 +20,8 @@ fn mod_<T: PartialOrd + Sub<Output = T> + Copy>(a: T, b: T) -> T {
     }
 }
 
-fn random_val() -> f64 {
-    unsafe { rand() as f64 / 2_147_483_647_f64 }
+fn random_val() -> f32 {
+    unsafe { (rand() as i32 / 2_147_483_647) as f32}
 }
 
 extern "C" {
@@ -30,8 +30,8 @@ extern "C" {
 
 // Rectangle CSG equation. Returns minimum signed distance from
 // space carved by
-// lowerLeft vertex and opposite rectangle vertex upperRight.
-fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f64 {
+// lower_left vertex and opposite rectangle vertex upper_right.
+fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
     let lower_left = position + lower_left * -1.0;
     let upper_right = upper_right + position * -1.0;
     -min(
@@ -52,9 +52,9 @@ enum Hit {
 }
 
 // Sample the world using Signed Distance Fields.
-fn query_database(position: Vec3d) -> (f64, Hit) {
+fn query_database(position: Vec3d) -> (f32, Hit) {
     let mut hit_type: Hit;
-    let mut distance = 1e9_f64;
+    let mut distance = 1e9_f32;
     let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)
     let letters = [
         // 15 two points lines
@@ -68,13 +68,13 @@ fn query_database(position: Vec3d) -> (f64, Hit) {
     for letter in letters.iter() {
         let letter = &letter[0..4].as_bytes();
         let begin = Vec3d {
-            x: (letter[0] - 79) as f64,
-            y: (letter[1] - 79) as f64,
+            x: (letter[0] as i32 - 79) as f32,
+            y: (letter[1] as i32 - 79) as f32,
             z: 0.0,
         } * 0.5;
         let e = Vec3d {
-            x: (letter[2] - 79) as f64,
-            y: (letter[3] - 79) as f64,
+            x: (letter[2] as i32 - 79) as f32,
+            y: (letter[3] as i32 - 79) as f32,
             z: 0.0,
         } * 0.5
             + begin * -1.0;
@@ -97,23 +97,23 @@ fn query_database(position: Vec3d) -> (f64, Hit) {
         },
     ];
 
-    for curve in curves.iter() {
+    for curve in curves.iter().rev() {
         let mut o: Vec3d = f + *curve * -1.0;
         let cmp = if o.x > 0.0 {
-            f64::abs(f64::sqrt(o % o) - 2.0)
+            ((o % o).sqrt() - 2.0).abs()
         } else {
             o.y += o.y;
             if o.y > 0.0 {
                 -2.0
             } else {
-                2.0 + f64::sqrt(o % o) // This is wrong!
+                2.0 + (o % o).sqrt() // TODO
             }
         };
 
         distance = min(distance, cmp);
     }
 
-    distance = f64::powf(f64::powf(distance, 8.0) + f64::powf(position.z, 8.0), 0.125) - 0.5;
+    distance = (distance.powf(8.0) + position.z.powf(8.0)).powf(0.125) - 0.5;
     hit_type = Hit::Letter;
 
     let room_dist = min(
@@ -173,7 +173,7 @@ fn query_database(position: Vec3d) -> (f64, Hit) {
         hit_type = Hit::Wall;
     }
 
-    let sun: f64 = 19.9 - position.y; // Everything above 19.9 is light source.
+    let sun = 19.9 - position.y; // Everything above 19.9 is light source.
     if sun < distance {
         distance = sun;
         hit_type = Hit::Sun;
@@ -184,13 +184,9 @@ fn query_database(position: Vec3d) -> (f64, Hit) {
 
 // Perform signed sphere marching
 // Returns hitType 0, 1, 2, or 3 and update hit position/normal
-fn ray_marching(
-    origin: Vec3d,
-    direction: Vec3d,
-    mut hit_pos: Vec3d,
-    mut hit_norm: Vec3d,
-) -> (Hit, Vec3d) {
-    let mut no_hit_count: i32 = 0;
+fn ray_marching(origin: Vec3d, direction: Vec3d, mut hit_norm: Vec3d) -> (Hit, Vec3d, Vec3d) {
+    let mut hit_pos: Vec3d = Default::default();
+    let mut no_hit_count = 0;
     // Signed distance marching
 
     let mut total_d = 0.0;
@@ -231,16 +227,15 @@ fn ray_marching(
                 .0 - d,
             };
 
-            return (hit_type, hit_norm);
+            return (hit_type, hit_norm, hit_pos);
         }
 
         total_d += d;
     }
-    (Hit::None, hit_norm)
+    (Hit::None, hit_norm, hit_pos)
 }
 
 fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
-    let sampled_position: Vec3d = Default::default();
     let normal: Vec3d = Default::default();
     let mut color: Vec3d = Default::default();
     let mut attenuation = Vec3d::new(1.0);
@@ -254,7 +249,7 @@ fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
 
     for _ in (0..4).rev() {
         // Number of bounces
-        let (hit_type, normal) = ray_marching(origin, direction, sampled_position, normal);
+        let (hit_type, normal, sampled_position) = ray_marching(origin, direction, normal);
         match hit_type {
             Hit::None => break,
             Hit::Letter => {
@@ -268,7 +263,7 @@ fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
                 let incidence = normal % light_direction;
                 let p = 6.283_185 * random_val();
                 let c = random_val();
-                let s = f64::sqrt(1.0 - c);
+                let s = f32::sqrt(1.0 - c);
                 let g = if normal.z < 0.0 { -1.0 } else { 1.0 };
                 let u = -1.0 / (g + normal.z);
                 let v = normal.x * normal.y * u;
@@ -276,23 +271,18 @@ fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
                     x: v,
                     y: g + normal.y * normal.y * u,
                     z: -normal.y,
-                } * (f64::cos(p) * s)
+                } * (f32::cos(p) * s)
                     + Vec3d {
                         x: 1.0 + g * normal.x * normal.x * u,
                         y: g * v,
                         z: -g * normal.x,
-                    } * (f64::sin(p) * s)
+                    } * (f32::sin(p) * s)
                     + normal * c.sqrt();
                 origin = sampled_position + direction * 0.1;
                 attenuation = attenuation * 0.2;
                 if incidence > 0.0
-                    && ray_marching(
-                        sampled_position + normal * 0.1,
-                        light_direction,
-                        sampled_position,
-                        normal,
-                    )
-                    .0 == Hit::Sun
+                    && ray_marching(sampled_position + normal * 0.1, light_direction, normal).0
+                        == Hit::Sun
                 {
                     color = color
                         + attenuation
@@ -338,7 +328,7 @@ fn main() {
         x: goal.z,
         y: 0.0,
         z: -goal.x,
-    } * ((1.0 / w) as f64);
+    } * ((1.0 / w) as f32);
 
     // Cross-product to get the up vector
     let up = Vec3d {
@@ -356,20 +346,22 @@ fn main() {
                     + trace(
                         position,
                         !(goal
-                            + left * (x as f64 - w / 2.0 + random_val())
-                            + up * (y as f64 - h / 2.0 + random_val())),
+                            + left * (x as f32 - w / 2.0 + random_val())
+                            + up * (y as f32 - h / 2.0 + random_val())),
                     );
-
-                // Reinhard tone mapping
-                color = color * (1.0 / samples_count) + 14.0 / 241.0;
-                let o = color + 1.0;
-                color = Vec3d {
-                    x: color.x / o.x,
-                    y: color.y / o.y,
-                    z: color.z / o.z,
-                } * 255.0;
-                print!("{}{}{}", color.x as u8 as char, color.y as u8 as char, color.z as u8 as char);
             }
+            // Reinhard tone mapping
+            color = color * (1.0 / samples_count) + 14.0 / 241.0;
+            let o = color + 1.0;
+            color = Vec3d {
+                x: color.x / o.x,
+                y: color.y / o.y,
+                z: color.z / o.z,
+            } * 255.0;
+            print!(
+                "{}{}{}",
+                color.x as u8 as char, color.y as u8 as char, color.z as u8 as char
+            );
         }
     }
 } // Andrew Kensler
