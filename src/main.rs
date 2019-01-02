@@ -21,7 +21,7 @@ fn mod_<T: PartialOrd + Sub<Output = T> + Copy>(a: T, b: T) -> T {
 }
 
 fn random_val() -> f32 {
-    unsafe { (rand() as i32 / 2_147_483_647) as f32}
+    unsafe { (f64::from(rand()) / 2_147_483_647_f64) as f32}
 }
 
 extern "C" {
@@ -102,12 +102,12 @@ fn query_database(position: Vec3d) -> (f32, Hit) {
         let cmp = if o.x > 0.0 {
             ((o % o).sqrt() - 2.0).abs()
         } else {
-            o.y += o.y;
             if o.y > 0.0 {
-                -2.0
+               o.y += -2.0
             } else {
-                2.0 + (o % o).sqrt() // TODO
+               o.y += 2.0
             }
+            (o % o).sqrt()
         };
 
         distance = min(distance, cmp);
@@ -239,16 +239,13 @@ fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
     let normal: Vec3d = Default::default();
     let mut color: Vec3d = Default::default();
     let mut attenuation = Vec3d::new(1.0);
-    let light_direction = Vec3d {
-        ..!Vec3d {
+    let light_direction = !Vec3d {
             x: 0.6,
             y: 0.6,
             z: 1.0,
-        }
-    }; // Directional light
+        }; // Directional light
 
-    for _ in (0..4).rev() {
-        // Number of bounces
+    for _ in 0..4 { // Number of bounces
         let (hit_type, normal, sampled_position) = ray_marching(origin, direction, normal);
         match hit_type {
             Hit::None => break,
