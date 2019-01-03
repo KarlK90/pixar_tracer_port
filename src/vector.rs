@@ -1,6 +1,6 @@
-use std::ops::{Add, Mul, Not, Rem};
-use std::fmt::Debug;
 use std::fmt;
+use std::fmt::Debug;
+use std::ops::{Add, Mul, Not, Rem};
 
 #[derive(Copy, Clone, Default)]
 pub struct Vec3d {
