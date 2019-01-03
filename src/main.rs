@@ -242,7 +242,7 @@ fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
         z: 1.0,
     }; // Directional light
 
-    for _ in 0..4 {
+    for _ in 0..3 {
         // Number of bounces
         let (hit_type, normal, sampled_position) = ray_marching(origin, direction, normal);
         match hit_type {
