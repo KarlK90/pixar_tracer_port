@@ -1,6 +1,8 @@
 mod vector;
 
+extern crate rand;
 use crate::vector::Vec3d;
+use rand::prelude::*;
 use std::ops::Sub;
 use std::os::raw::c_int;
 
@@ -21,7 +23,11 @@ fn mod_<T: PartialOrd + Sub<Output = T> + Copy>(a: T, b: T) -> T {
 }
 
 fn random_val() -> f32 {
-    unsafe { (f64::from(rand()) / 2_147_483_647_f64) as f32}
+    let num = unsafe { (f64::from(rand()) / 2_147_483_647_f64) as f32 };
+    if cfg!(feature = "DEBUG") {
+        println!("Rand: {}", num);
+    }
+    num
 }
 
 extern "C" {
@@ -43,7 +49,7 @@ fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
     )
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum Hit {
     None = 0,
     Letter = 1,
@@ -103,9 +109,9 @@ fn query_database(position: Vec3d) -> (f32, Hit) {
             ((o % o).sqrt() - 2.0).abs()
         } else {
             if o.y > 0.0 {
-               o.y += -2.0
+                o.y += -2.0
             } else {
-               o.y += 2.0
+                o.y += 2.0
             }
             (o % o).sqrt()
         };
@@ -240,13 +246,19 @@ fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
     let mut color: Vec3d = Default::default();
     let mut attenuation = Vec3d::new(1.0);
     let light_direction = !Vec3d {
-            x: 0.6,
-            y: 0.6,
-            z: 1.0,
-        }; // Directional light
+        x: 0.6,
+        y: 0.6,
+        z: 1.0,
+    }; // Directional light
 
-    for _ in 0..4 { // Number of bounces
+    for _ in 0..3 {
+        // Number of bounces
         let (hit_type, normal, sampled_position) = ray_marching(origin, direction, normal);
+        if cfg!(feature = "DEBUG") {
+            println!("Hit Type: {:?}", hit_type);
+            println!("Normal: {:?}", normal);
+            println!("Sampled Position: {:?}", sampled_position);
+        }
         match hit_type {
             Hit::None => break,
             Hit::Letter => {
@@ -310,7 +322,7 @@ fn main() {
     //  int w = 960, h = 540, samplesCount = 16;
     let w = 960.0;
     let h = 540.0;
-    let samples_count = 32.0;
+    let samples_count = 8.0;
     let position = Vec3d {
         x: -22.0,
         y: 5.0,
@@ -334,18 +346,41 @@ fn main() {
         z: goal.x * left.y - goal.y * left.x,
     };
 
-    println!("P6 {} {} 255 ", w, h);
+    if !cfg!(feature = "DEBUG") {
+        println!("P6 {} {} 255 ", w, h);
+    }
     for y in (0..h as i32).rev() {
         for x in (0..w as i32).rev() {
+            if cfg!(feature = "DEBUG") {
+                println!("({}, {})", x, y);
+            }
+
             let mut color = Vec3d::default();
-            for _p in 0..samples_count as i32 {
-                color = color
-                    + trace(
-                        position,
-                        !(goal
-                            + left * (x as f32 - w / 2.0 + random_val())
-                            + up * (y as f32 - h / 2.0 + random_val())),
-                    );
+            for p in (0..samples_count as i32).rev() {
+                if cfg!(feature = "DEBUG") {
+                    println!("Sample {}", p);
+                }
+                let rand_1 = random_val();
+                let rand_2 = random_val();
+                if cfg!(feature = "DEBUG") {
+                    //println!("Rand 1: {} Rand 2: {}", rand_1, rand_2);
+                }
+                let color_next = trace(
+                    position,
+                    !(goal
+                        + left * (x as f32 - w / 2.0 + rand_1)
+                        + up * (y as f32 - h / 2.0 + rand_2)),
+                );
+
+                color = color + color_next;
+                if cfg!(feature = "DEBUG") {
+                    println!("Trace: {:?}", color_next);
+                    println!("Color: {:?}", color);
+                    println!();
+                }
+            }
+            if cfg!(feature = "DEBUG") {
+                println!();
             }
             // Reinhard tone mapping
             color = color * (1.0 / samples_count) + 14.0 / 241.0;
@@ -355,10 +390,17 @@ fn main() {
                 y: color.y / o.y,
                 z: color.z / o.z,
             } * 255.0;
-            print!(
-                "{}{}{}",
-                color.x as u8 as char, color.y as u8 as char, color.z as u8 as char
-            );
+            if cfg!(feature = "DEBUG") {
+                println!("Color Mapped: {:?}", color);
+                println!();
+                println!();
+            }
+            if !cfg!(feature = "DEBUG") {
+                print!(
+                    "{} {} {}",
+                    char::from(color.x as u8), char::from(color.y as u8), char::from(color.z as u8)
+                );
+            }
         }
     }
 } // Andrew Kensler

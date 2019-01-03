@@ -1,10 +1,18 @@
 use std::ops::{Add, Mul, Not, Rem};
+use std::fmt::Debug;
+use std::fmt;
 
 #[derive(Copy, Clone, Default)]
 pub struct Vec3d {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl Debug for Vec3d {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {} {}", self.x, self.y, self.z)
+    }
 }
 
 impl Add<Vec3d> for Vec3d {
