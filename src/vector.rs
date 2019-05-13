@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Debug;
-use std::ops::{Add, Mul, Not, Rem};
+use std::ops::{Add, Mul, Not, Rem, Sub};
 
 #[derive(Copy, Clone, Default)]
 pub struct Vec3d {
@@ -33,6 +33,17 @@ impl Add<f32> for Vec3d {
             x: self.x + other,
             y: self.y + other,
             z: self.z + other,
+        }
+    }
+}
+
+impl Sub<Vec3d> for Vec3d {
+    type Output = Vec3d;
+    fn sub(self, other: Self) -> Self::Output {
+        Vec3d {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
         }
     }
 }

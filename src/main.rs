@@ -30,8 +30,8 @@ fn random_val() -> f32 {
 // space carved by
 // lower_left vertex and opposite rectangle vertex upper_right.
 fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
-    let lower_left = position + lower_left * -1.0;
-    let upper_right = upper_right + position * -1.0;
+    let lower_left = position - lower_left;
+    let upper_right = upper_right - position;
     -min(
         min(
             min(lower_left.x, upper_right.x),
@@ -75,8 +75,8 @@ fn query_database(position: Vec3d) -> (f32, Hit) {
             y: (letter[3] as i32 - 79) as f32,
             z: 0.0,
         } * 0.5
-            + begin * -1.0;
-        let o = f + (begin + e * min(-min((begin + f * -1.0) % e / (e % e), 0.0), 1.0)) * -1.0;
+            - begin;
+        let o = f - (begin + e * min(-min((begin - f) % e / (e % e), 0.0), 1.0));
         distance = min(distance, o % o); // compare squared distance.
     }
     distance = distance.sqrt(); // Get real distance, not square distance.
@@ -95,8 +95,8 @@ fn query_database(position: Vec3d) -> (f32, Hit) {
         },
     ];
 
-    for curve in curves.iter().rev() {
-        let mut o: Vec3d = f + *curve * -1.0;
+    for curve in curves.into_iter().rev() {
+        let mut o: Vec3d = f - *curve;
         let cmp = if o.x > 0.0 {
             ((o % o).sqrt() - 2.0).abs()
         } else {
@@ -320,7 +320,7 @@ fn main() -> Result<(), std::io::Error> {
         x: -3.0,
         y: 4.0,
         z: 0.0,
-    } + position * -1.0);
+    } - position);
     let left = !Vec3d {
         x: goal.z,
         y: 0.0,
