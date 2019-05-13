@@ -29,9 +29,9 @@ fn random_val() -> f32 {
 // Rectangle CSG equation. Returns minimum signed distance from
 // space carved by
 // lower_left vertex and opposite rectangle vertex upper_right.
-fn box_test(position: &Vec3d, lower_left: &Vec3d, upper_right: &Vec3d) -> f32 {
-    let lower_left = position - lower_left;
-    let upper_right = upper_right - position;
+fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
+    let lower_left = position + lower_left * -1.0;
+    let upper_right = upper_right + position * -1.0;
     -min(
         min(
             min(lower_left.x, upper_right.x),
@@ -50,10 +50,10 @@ enum Hit {
 }
 
 // Sample the world using Signed Distance Fields.
-fn query_database(position: &Vec3d) -> (f32, Hit) {
+fn query_database(position: Vec3d) -> (f32, Hit) {
     let mut hit_type: Hit;
     let mut distance = 1e9_f32;
-    let f = Vec3d { z: 0.0, ..*position }; // Flattened position (z=0)
+    let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)
     let letters = [
         // 15 two points lines
         "5O5_", "5W9W", "5_9_", // P (without curve)
@@ -75,9 +75,9 @@ fn query_database(position: &Vec3d) -> (f32, Hit) {
             y: (letter[3] as i32 - 79) as f32,
             z: 0.0,
         } * 0.5
-            + &begin * -1.0;
-        let o = &f - &(&begin + &(&e * min(-min(&(&begin - &f) % &e / (&e % &e), 0.0), 1.0)));
-        distance = min(distance, &o % &o); // compare squared distance.
+            + begin * -1.0;
+        let o = f + (begin + e * min(-min((begin + f * -1.0) % e / (e % e), 0.0), 1.0)) * -1.0;
+        distance = min(distance, o % o); // compare squared distance.
     }
     distance = distance.sqrt(); // Get real distance, not square distance.
 
@@ -96,16 +96,16 @@ fn query_database(position: &Vec3d) -> (f32, Hit) {
     ];
 
     for curve in curves.iter().rev() {
-        let mut o: Vec3d = &f - curve;
+        let mut o: Vec3d = f + *curve * -1.0;
         let cmp = if o.x > 0.0 {
-            ((&o % &o).sqrt() - 2.0).abs()
+            ((o % o).sqrt() - 2.0).abs()
         } else {
             if o.y > 0.0 {
                 o.y += -2.0
             } else {
                 o.y += 2.0
             }
-            (&o % &o).sqrt()
+            (o % o).sqrt()
         };
 
         distance = min(distance, cmp);
@@ -120,13 +120,13 @@ fn query_database(position: &Vec3d) -> (f32, Hit) {
         -min(
             // Lower room
             box_test(
-                &position,
-                &Vec3d {
+                position,
+                Vec3d {
                     x: -30.0,
                     y: -0.5,
                     z: -30.0,
                 },
-                &Vec3d {
+                Vec3d {
                     x: 30.0,
                     y: 18.0,
                     z: 30.0,
@@ -134,13 +134,13 @@ fn query_database(position: &Vec3d) -> (f32, Hit) {
             ),
             // Upper room
             box_test(
-                &position,
-                &Vec3d {
+                position,
+                Vec3d {
                     x: -25.0,
                     y: 17.0,
                     z: -25.0,
                 },
-                &Vec3d {
+                Vec3d {
                     x: 25.0,
                     y: 20.0,
                     z: 25.0,
@@ -149,16 +149,16 @@ fn query_database(position: &Vec3d) -> (f32, Hit) {
         ),
         box_test(
             // Ceiling "planks" spaced 8 units apart.
-            &Vec3d {
+            Vec3d {
                 x: mod_(position.x.abs(), 8.0),
-                ..*position
+                ..position
             },
-            &Vec3d {
+            Vec3d {
                 x: 1.5,
                 y: 18.5,
                 z: -25.0,
             },
-            &Vec3d {
+            Vec3d {
                 x: 6.5,
                 y: 20.0,
                 z: 25.0,
@@ -182,44 +182,44 @@ fn query_database(position: &Vec3d) -> (f32, Hit) {
 
 // Perform signed sphere marching
 // Returns hitType 0, 1, 2, or 3 and update hit position/normal
-fn ray_marching(origin: &Vec3d, direction: &Vec3d, hit_norm: &Vec3d) -> (Hit, Vec3d, Vec3d) {
+fn ray_marching(origin: Vec3d, direction: Vec3d, mut hit_norm: Vec3d) -> (Hit, Vec3d, Vec3d) {
     let mut hit_pos: Vec3d = Default::default();
     let mut no_hit_count = 0;
     // Signed distance marching
 
     let mut total_d = 0.0;
     while total_d < 100.0 {
-        hit_pos = origin + &(direction * total_d);
-        let (d, hit_type) = query_database(&hit_pos);
+        hit_pos = origin + direction * total_d;
+        let (d, hit_type) = query_database(hit_pos);
 
         no_hit_count += 1;
         if d < 0.01 || no_hit_count > 99 {
-            let hit_norm = !Vec3d {
+            hit_norm = !Vec3d {
                 x: query_database(
-                    &(&hit_pos
-                        + &Vec3d {
+                    hit_pos
+                        + Vec3d {
                             x: 0.01,
                             y: 0.0,
                             z: 0.0,
-                        }),
+                        },
                 )
                 .0 - d,
                 y: query_database(
-                    &(&hit_pos
-                        + &Vec3d {
+                    hit_pos
+                        + Vec3d {
                             x: 0.0,
                             y: 0.01,
                             z: 0.0,
-                        }),
+                        },
                 )
                 .0 - d,
                 z: query_database(
-                    &(&hit_pos
-                        + &Vec3d {
+                    hit_pos
+                        + Vec3d {
                             x: 0.0,
                             y: 0.0,
                             z: 0.01,
-                        }),
+                        },
                 )
                 .0 - d,
             };
@@ -229,14 +229,12 @@ fn ray_marching(origin: &Vec3d, direction: &Vec3d, hit_norm: &Vec3d) -> (Hit, Ve
 
         total_d += d;
     }
-    (Hit::None, Vec3d{..*hit_norm}, hit_pos)
+    (Hit::None, hit_norm, hit_pos)
 }
 
-fn trace(origin: &Vec3d, direction: &Vec3d) -> Vec3d {
+fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
     let normal: Vec3d = Default::default();
     let mut color: Vec3d = Default::default();
-    let mut origin = Vec3d{..*origin};
-    let mut direction = Vec3d{..*direction};
     let mut attenuation = Vec3d::new(1.0);
     let light_direction = !Vec3d {
         x: 0.6,
@@ -246,18 +244,18 @@ fn trace(origin: &Vec3d, direction: &Vec3d) -> Vec3d {
 
     for _ in 0..3 {
         // Number of bounces
-        let (hit_type, normal, sampled_position) = ray_marching(&origin, &direction, &normal);
+        let (hit_type, normal, sampled_position) = ray_marching(origin, direction, normal);
         match hit_type {
             Hit::None => break,
             Hit::Letter => {
                 // Specular bounce on a letter. No color acc.
-                direction = &direction + &(&normal * (&normal % &direction * -2.0));
-                origin = sampled_position + &direction * 0.1;
+                direction = direction + normal * (normal % direction * -2.0);
+                origin = sampled_position + direction * 0.1;
                 attenuation = attenuation * 0.2; // Attenuation via distance traveled.
             }
             Hit::Wall => {
                 // Wall hit uses color yellow?
-                let incidence = &normal % &light_direction;
+                let incidence = normal % light_direction;
                 let p = 6.283_185 * random_val();
                 let c = random_val();
                 let s = f32::sqrt(1.0 - c);
@@ -270,20 +268,20 @@ fn trace(origin: &Vec3d, direction: &Vec3d) -> Vec3d {
                     z: -normal.y,
                 } * (f32::cos(p) * s)
                     + Vec3d {
-                        x: 1.0 + g * &normal.x * &normal.x * u,
+                        x: 1.0 + g * normal.x * normal.x * u,
                         y: g * v,
                         z: -g * normal.x,
                     } * (f32::sin(p) * s)
-                    + &normal * c.sqrt();
-                origin = &sampled_position + &(&direction * 0.1);
+                    + normal * c.sqrt();
+                origin = sampled_position + direction * 0.1;
                 attenuation = attenuation * 0.2;
                 if incidence > 0.0
-                    && ray_marching(&(&sampled_position + &(&normal * 0.1)), &light_direction, &normal).0
+                    && ray_marching(sampled_position + normal * 0.1, light_direction, normal).0
                         == Hit::Sun
                 {
                     color = color
-                        + &attenuation
-                            * &Vec3d {
+                        + attenuation
+                            * Vec3d {
                                 x: 500.0,
                                 y: 400.0,
                                 z: 100.0,
@@ -293,8 +291,8 @@ fn trace(origin: &Vec3d, direction: &Vec3d) -> Vec3d {
             }
             Hit::Sun => {
                 color = color
-                    + &attenuation
-                        * &Vec3d {
+                    + attenuation
+                        * Vec3d {
                             x: 50.0,
                             y: 80.0,
                             z: 100.0,
@@ -311,18 +309,18 @@ fn main() -> Result<(), std::io::Error> {
     let mut file = BufWriter::new(output);
     let w = 960.0;
     let h = 540.0;
-    let samples_count = 32.0;
+    let samples_count = 16.0;
 
     let position = Vec3d {
         x: -22.0,
         y: 5.0,
         z: 25.0,
     };
-    let goal = !(&Vec3d {
+    let goal = !(Vec3d {
         x: -3.0,
         y: 4.0,
         z: 0.0,
-    } - &position);
+    } + position * -1.0);
     let left = !Vec3d {
         x: goal.z,
         y: 0.0,
@@ -343,15 +341,15 @@ fn main() -> Result<(), std::io::Error> {
             for _ in (0..samples_count as i32).rev() {
                 color = color
                     + trace(
-                        &position,
-                        &!(&(&goal
-                            + &(&left * (x as f32 - w / 2.0 + random_val())))
-                            + &(&up * (y as f32 - h / 2.0 + random_val()))),
+                        position,
+                        !(goal
+                            + left * (x as f32 - w / 2.0 + random_val())
+                            + up * (y as f32 - h / 2.0 + random_val())),
                     );
             }
             // Reinhard tone mapping
             color = color * (1.0 / samples_count) + 14.0 / 241.0;
-            let o = &color + 1.0;
+            let o = color + 1.0;
             color = Vec3d {
                 x: color.x / o.x,
                 y: color.y / o.y,

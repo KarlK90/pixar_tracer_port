@@ -1,8 +1,8 @@
 use std::fmt;
 use std::fmt::Debug;
-use std::ops::{Add, Mul, Not, Rem, Sub};
+use std::ops::{Add, Mul, Not, Rem};
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 pub struct Vec3d {
     pub x: f32,
     pub y: f32,
@@ -15,57 +15,13 @@ impl Debug for Vec3d {
     }
 }
 
-impl Add<&Vec3d> for &Vec3d {
-    type Output = Vec3d;
-    fn add(self, other: &Vec3d) -> Self::Output {
-        Vec3d {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-        }
-    }
-}
-
-impl Sub<&Vec3d> for &Vec3d {
-    type Output = Vec3d;
-    fn sub(self, other: &Vec3d) -> Self::Output {
-        Vec3d {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
-impl Sub<Vec3d> for Vec3d {
-    type Output = Vec3d;
-    fn sub(self, other: Self) -> Self::Output {
-        Vec3d {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
 impl Add<Vec3d> for Vec3d {
     type Output = Vec3d;
-    fn add(self, other: Self) -> Self::Output {
+    fn add(self, other: Vec3d) -> Self::Output {
         Vec3d {
             x: self.x + other.x,
             y: self.y + other.y,
             z: self.z + other.z,
-        }
-    }
-}
-
-impl Add<f32> for &Vec3d {
-    type Output = Vec3d;
-    fn add(self, other: f32) -> Self::Output {
-        Vec3d {
-            x: self.x + other,
-            y: self.y + other,
-            z: self.z + other,
         }
     }
 }
@@ -81,35 +37,13 @@ impl Add<f32> for Vec3d {
     }
 }
 
-impl Mul<&Vec3d> for &Vec3d {
-    type Output = Vec3d;
-    fn mul(self, other: &Vec3d) -> Self::Output {
-        Vec3d {
-            x: self.x * other.x,
-            y: self.y * other.y,
-            z: self.z * other.z,
-        }
-    }
-}
-
 impl Mul<Vec3d> for Vec3d {
     type Output = Vec3d;
-    fn mul(self, other: Self) -> Self::Output {
+    fn mul(self, other: Vec3d) -> Self::Output {
         Vec3d {
             x: self.x * other.x,
             y: self.y * other.y,
             z: self.z * other.z,
-        }
-    }
-}
-
-impl Mul<f32> for &Vec3d {
-    type Output = Vec3d;
-    fn mul(self, other: f32) -> Self::Output {
-        Vec3d {
-            x: self.x * other,
-            y: self.y * other,
-            z: self.z * other,
         }
     }
 }
@@ -125,31 +59,17 @@ impl Mul<f32> for Vec3d {
     }
 }
 
-impl Rem for &Vec3d {
-    type Output = f32;
-    fn rem(self, other: Self) -> Self::Output {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-
 impl Rem for Vec3d {
     type Output = f32;
-    fn rem(self, other: Self) -> Self::Output {
+    fn rem(self, other: Vec3d) -> Self::Output {
         self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-
-impl Not for &Vec3d {
-    type Output = Vec3d;
-    fn not(self) -> Vec3d {
-        self * (1.0 / (self % self).sqrt())
     }
 }
 
 impl Not for Vec3d {
     type Output = Vec3d;
     fn not(self) -> Vec3d {
-        &self * (1.0 / (&self % &self).sqrt())
+        self * (1.0 / (self % self).sqrt())
     }
 }
 
