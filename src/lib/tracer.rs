@@ -84,7 +84,7 @@ fn test() -> Vec<(i32, i32, i32, i32)> {
 }
 
 // Sample the world using Signed Distance Fields.
-pub fn query_database(position: Vec3d) -> (f32, Hit) {
+pub fn query_database_old(position: Vec3d) -> (f32, Hit) {
     let mut hit_type: Hit;
     let mut distance = 1e9_f32;
     let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)
@@ -214,7 +214,7 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
     (distance, hit_type)
 }
 
-pub fn query_database_new(position: Vec3d) -> (f32, Hit) {
+pub fn query_database(position: Vec3d) -> (f32, Hit) {
     let mut hit_type: Hit;
     let mut distance = 1e9_f32;
     let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)

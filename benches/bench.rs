@@ -5,7 +5,7 @@ extern crate pathtracer;
 use criterion::black_box;
 use criterion::Criterion;
 
-use pathtracer::{query_database, query_database_new, Vec3d};
+use pathtracer::{query_database_old, query_database, Vec3d};
 
 fn fibonacci(n: u64) -> u64 {
     match n {
@@ -17,9 +17,9 @@ fn fibonacci(n: u64) -> u64 {
 
 fn criterion_benchmark(c: &mut Criterion) {
     //c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
-    c.bench_function("query_database-default", |b| {
+    c.bench_function("query_database-old", |b| {
         b.iter(|| {
-            query_database(black_box(Vec3d {
+            query_database_old(black_box(Vec3d {
                 x: -22.0,
                 y: 5.0,
                 z: 25.0,
@@ -28,7 +28,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
     c.bench_function("query_database-lazy", |b| {
         b.iter(|| {
-            query_database_new(black_box(Vec3d {
+            query_database(black_box(Vec3d {
                 x: -22.0,
                 y: 5.0,
                 z: 25.0,
