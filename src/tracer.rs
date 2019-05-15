@@ -1,8 +1,5 @@
 use super::vector::Vec3d;
-
-pub fn random_val() -> f32 {
-    rand::random()
-}
+use rand::random;
 
 // Rectangle CSG equation. Returns minimum signed distance from
 // space carved by
@@ -249,8 +246,8 @@ pub fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
             Hit::Wall => {
                 // Wall hit uses color yellow?
                 let incidence = normal % light_direction;
-                let p = 6.283_185 * random_val();
-                let c = random_val();
+                let p = 6.283_185 * random::<f32>();
+                let c = random::<f32>();
                 let s = f32::sqrt(1.0 - c);
                 let g = if normal.z < 0.0 { -1.0 } else { 1.0 };
                 let u = -1.0 / (g + normal.z);

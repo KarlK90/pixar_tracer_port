@@ -3,10 +3,11 @@ extern crate rayon;
 
 use std::fs::File;
 use std::io::{BufWriter, Error, Write};
+use rand::random;
 
 use rayon::prelude::*;
 
-use pathtracer::{random_val, trace, Vec3d};
+use pathtracer::{trace, Vec3d};
 
 fn main() -> Result<(), Error> {
     let output = File::create("pixar.ppm")?;
@@ -40,36 +41,38 @@ fn main() -> Result<(), Error> {
 
     file.write_all(format!("P6 {} {} 255 ", w as u32, h as u32).as_bytes())?;
 
-    let mut pixels = Vec::<(f32, f32)>::with_capacity(h as usize * w as usize);
-    for y in (0..h as u32).rev() {
-        for x in (0..w as u32).rev() {
-            pixels.push((x as f32, y as f32));
-        }
-    }
-
-    let bytes: Vec<u8> = pixels.par_iter().flat_map(|(x, y)| {
-        let mut color = Vec3d::default();
-        for _ in (0..samples_count as i32).rev() {
-            color = color
-                + trace(
-                position,
-                !(goal
-                    + left * (*x as f32 - w / 2.0 + random_val())
-                    + up * (*y as f32 - h / 2.0 + random_val())),
-            );
-        }
-        // Reinhard tone mapping
-        color = color * (1.0 / samples_count) + 14.0 / 241.0;
-        let o = color + 1.0;
-        color = Vec3d {
-            x: color.x / o.x,
-            y: color.y / o.y,
-            z: color.z / o.z,
-        } * 255.0;
-        vec![color.x as u8, color.y as u8, color.z as u8]
-    }).collect();
-
-    file.write_all(&bytes)?;
+    let mut pixels = vec![0u8; h as usize * w as usize * 3];
+    pixels
+        .par_chunks_mut(3)
+        .into_par_iter()
+        .rev()
+        .enumerate()
+        .for_each(|(index, rgb)| {
+            let x = (index % w as usize) as f32;
+            let y = (index / w as usize) as f32;
+            let mut color = Vec3d::default();
+            for _ in (0..samples_count as i32).rev() {
+                color = color
+                    + trace(
+                    position,
+                    !(goal
+                        + left * (x - w / 2.0 + random::<f32>())
+                        + up * (y - h / 2.0 + random::<f32>())),
+                );
+            }
+            // Reinhard tone mapping
+            color = color * (1.0 / samples_count) + 14.0 / 241.0;
+            let o = color + 1.0;
+            color = Vec3d {
+                x: color.x / o.x,
+                y: color.y / o.y,
+                z: color.z / o.z,
+            } * 255.0;
+            rgb[0] = color.x as u8;
+            rgb[1] = color.y as u8;
+            rgb[2] = color.z as u8;
+        });
+    file.write_all(&pixels)?;
     file.flush()?;
     Ok(())
 } // Andrew Kensler
