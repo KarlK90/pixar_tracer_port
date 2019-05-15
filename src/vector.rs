@@ -9,6 +9,13 @@ pub struct Vec3d {
     pub z: f32,
 }
 
+impl Vec3d {
+    #[inline(always)]
+    pub const fn new(x: f32, y: f32, z: f32) -> Vec3d {
+        Vec3d { x, y, z }
+    }
+}
+
 impl Debug for Vec3d {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {} {}", self.x, self.y, self.z)
@@ -81,11 +88,5 @@ impl Not for Vec3d {
     type Output = Vec3d;
     fn not(self) -> Vec3d {
         self * (1.0 / (self % self).sqrt())
-    }
-}
-
-impl Vec3d {
-    pub fn new(v: f32) -> Self {
-        Self { x: v, y: v, z: v }
     }
 }

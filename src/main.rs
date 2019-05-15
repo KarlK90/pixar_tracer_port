@@ -1,15 +1,10 @@
 extern crate pathtracer;
 
-use std::fs::File;
-use std::io::{BufWriter, Write};
-use std::ops::Sub;
-
-use rand::rngs::SmallRng;
-use rand::FromEntropy;
-
 use pathtracer::{random_val, trace, Vec3d};
+use std::fs::File;
+use std::io::{BufWriter, Write, Error};
 
-fn main() -> Result<(), std::io::Error> {
+fn main() -> Result<(), Error> {
     let output = File::create("pixar.ppm")?;
     let mut file = BufWriter::new(output);
     let w = 960.0;

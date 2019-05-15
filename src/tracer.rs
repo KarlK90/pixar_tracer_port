@@ -1,9 +1,4 @@
-use std::fs::File;
-use std::io::{BufWriter, Write};
 use std::ops::Sub;
-
-use rand::rngs::SmallRng;
-use rand::FromEntropy;
 
 use super::vector::Vec3d;
 
@@ -14,7 +9,7 @@ pub fn random_val() -> f32 {
 // Rectangle CSG equation. Returns minimum signed distance from
 // space carved by
 // lower_left vertex and opposite rectangle vertex upper_right.
-fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
+pub fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
     let lower_left = position - lower_left;
     let upper_right = upper_right - position;
     -min(
@@ -60,160 +55,7 @@ lazy_static! {
     };
 }
 
-fn test() -> Vec<(i32, i32, i32, i32)> {
-    [
-        // 15 two points lines
-        "5O5_", "5W9W", "5_9_", // P (without curve)
-        "AOEO", "COC_", "A_E_", // I
-        "IOQ_", "I_QO", // X
-        "UOY_", "Y_]O", "WW[W", // A
-        "aOa_", "aWeW", "a_e_", "cWiO",
-    ]
-    .concat()
-    .as_bytes()
-    .chunks(4)
-    .map(|s| {
-        (
-            s[0] as i32 - 79,
-            s[1] as i32 - 79,
-            s[2] as i32 - 79,
-            s[3] as i32 - 79,
-        )
-    })
-    .collect()
-}
-
 // Sample the world using Signed Distance Fields.
-pub fn query_database_old(position: Vec3d) -> (f32, Hit) {
-    let mut hit_type: Hit;
-    let mut distance = 1e9_f32;
-    let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)
-    let letters = [
-        // 15 two points lines
-        "5O5_", "5W9W", "5_9_", // P (without curve)
-        "AOEO", "COC_", "A_E_", // I
-        "IOQ_", "I_QO", // X
-        "UOY_", "Y_]O", "WW[W", // A
-        "aOa_", "aWeW", "a_e_", "cWiO",
-    ]; // R (without curve)
-
-    for letter in letters.iter() {
-        let letter = &letter[0..4].as_bytes();
-        let begin = Vec3d {
-            x: (letter[0] as i32 - 79) as f32,
-            y: (letter[1] as i32 - 79) as f32,
-            z: 0.0,
-        } * 0.5;
-        let e = Vec3d {
-            x: (letter[2] as i32 - 79) as f32,
-            y: (letter[3] as i32 - 79) as f32,
-            z: 0.0,
-        } * 0.5
-            - begin;
-        let o = f - (begin + e * min(-min((begin - f) % e / (e % e), 0.0), 1.0));
-        distance = min(distance, o % o); // compare squared distance.
-    }
-    distance = distance.sqrt(); // Get real distance, not square distance.
-
-    // Two curves (for P and R in PixaR) with hard-coded locations.
-    let curves = [
-        Vec3d {
-            x: -11.0,
-            y: 6.0,
-            z: 0.0,
-        },
-        Vec3d {
-            x: 11.0,
-            y: 6.0,
-            z: 0.0,
-        },
-    ];
-
-    for curve in curves.into_iter().rev() {
-        let mut o: Vec3d = f - *curve;
-        let cmp = if o.x > 0.0 {
-            ((o % o).sqrt() - 2.0).abs()
-        } else {
-            if o.y > 0.0 {
-                o.y += -2.0
-            } else {
-                o.y += 2.0
-            }
-            (o % o).sqrt()
-        };
-
-        distance = min(distance, cmp);
-    }
-
-    distance = (distance.powf(8.0) + position.z.powf(8.0)).powf(0.125) - 0.5;
-    hit_type = Hit::Letter;
-
-    let room_dist = min(
-        // min(A,B) = Union with Constructive solid geometry
-        //-min carves an empty space
-        -min(
-            // Lower room
-            box_test(
-                position,
-                Vec3d {
-                    x: -30.0,
-                    y: -0.5,
-                    z: -30.0,
-                },
-                Vec3d {
-                    x: 30.0,
-                    y: 18.0,
-                    z: 30.0,
-                },
-            ),
-            // Upper room
-            box_test(
-                position,
-                Vec3d {
-                    x: -25.0,
-                    y: 17.0,
-                    z: -25.0,
-                },
-                Vec3d {
-                    x: 25.0,
-                    y: 20.0,
-                    z: 25.0,
-                },
-            ),
-        ),
-        box_test(
-            // Ceiling "planks" spaced 8 units apart.
-            Vec3d {
-                x: mod_(position.x.abs(), 8.0),
-                ..position
-            },
-            Vec3d {
-                x: 1.5,
-                y: 18.5,
-                z: -25.0,
-            },
-            Vec3d {
-                x: 6.5,
-                y: 20.0,
-                z: 25.0,
-            },
-        ),
-    );
-
-    if room_dist < distance {
-        distance = room_dist;
-        hit_type = Hit::Wall;
-    }
-
-    let sun = 19.9 - position.y; // Everything above 19.9 is light source.
-    if sun < distance {
-        distance = sun;
-        hit_type = Hit::Sun;
-    }
-
-    (distance, hit_type)
-}
-
 pub fn query_database(position: Vec3d) -> (f32, Hit) {
     let mut hit_type: Hit;
     let mut distance = 1e9_f32;
@@ -337,7 +179,7 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
 
 // Perform signed sphere marching
 // Returns hitType 0, 1, 2, or 3 and update hit position/normal
-fn ray_marching(origin: Vec3d, direction: Vec3d, mut hit_norm: Vec3d) -> (Hit, Vec3d, Vec3d) {
+pub fn ray_marching(origin: Vec3d, direction: Vec3d, mut hit_norm: Vec3d) -> (Hit, Vec3d, Vec3d) {
     let mut hit_pos: Vec3d = Default::default();
     let mut no_hit_count = 0;
     // Signed distance marching
@@ -390,7 +232,7 @@ fn ray_marching(origin: Vec3d, direction: Vec3d, mut hit_norm: Vec3d) -> (Hit, V
 pub fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
     let normal: Vec3d = Default::default();
     let mut color: Vec3d = Default::default();
-    let mut attenuation = Vec3d::new(1.0);
+    let mut attenuation = Vec3d::new(1.0, 1.0, 1.0);
     let light_direction = !Vec3d {
         x: 0.6,
         y: 0.6,
@@ -474,8 +316,3 @@ fn mod_<T: PartialOrd + Sub<Output = T> + Copy>(a: T, b: T) -> T {
         a
     }
 }
-
-//static mut RND : SmallRng = {
-//    let rgen = SmallRng::from_entropy();
-//    rgen
-//};

@@ -5,27 +5,9 @@ extern crate pathtracer;
 use criterion::black_box;
 use criterion::Criterion;
 
-use pathtracer::{query_database_old, query_database, Vec3d};
-
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n - 1) + fibonacci(n - 2),
-    }
-}
+use pathtracer::{box_test, query_database, query_database_old, ray_marching, trace, Vec3d};
 
 fn criterion_benchmark(c: &mut Criterion) {
-    //c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
-    c.bench_function("query_database-old", |b| {
-        b.iter(|| {
-            query_database_old(black_box(Vec3d {
-                x: -22.0,
-                y: 5.0,
-                z: 25.0,
-            }))
-        })
-    });
     c.bench_function("query_database-lazy", |b| {
         b.iter(|| {
             query_database(black_box(Vec3d {
@@ -33,6 +15,33 @@ fn criterion_benchmark(c: &mut Criterion) {
                 y: 5.0,
                 z: 25.0,
             }))
+        })
+    });
+    c.bench_function("trace", |b| {
+        b.iter(|| {
+            trace(
+                black_box(Vec3d::new(-22.0, 5.0, 25.0)),
+                black_box(Vec3d::new(0.184649229, 0.215958387, -0.958783984)),
+            )
+        })
+    });
+
+    c.bench_function("box_test", |b| {
+        b.iter(|| {
+            box_test(
+                black_box(Vec3d::new(-22.0, 5.0, 25.0)),
+                black_box(Vec3d::new(-30.0, -0.5, -30.0)),
+                black_box(Vec3d::new(-30.0, 18.0, 30.0)),
+            )
+        })
+    });
+    c.bench_function("ray_marching", |b| {
+        b.iter(|| {
+            ray_marching(
+                black_box(Vec3d::new(-22.0, 5.0, 25.0)),
+                black_box(Vec3d::new(0.184649229, 0.215958387, -0.958783984)),
+                black_box(Vec3d::new(0.0, 0.0, 0.0)),
+            )
         })
     });
 }
