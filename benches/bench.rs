@@ -5,7 +5,7 @@ extern crate pathtracer;
 use criterion::black_box;
 use criterion::Criterion;
 
-use pathtracer::{box_test, query_database, query_database_old, ray_marching, trace, Vec3d};
+use pathtracer::{box_test, query_database, ray_marching, trace, Vec3d};
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("query_database-lazy", |b| {

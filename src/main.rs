@@ -1,8 +1,12 @@
 extern crate pathtracer;
+extern crate rayon;
+
+use std::fs::File;
+use std::io::{BufWriter, Error, Write};
+
+use rayon::prelude::*;
 
 use pathtracer::{random_val, trace, Vec3d};
-use std::fs::File;
-use std::io::{BufWriter, Write, Error};
 
 fn main() -> Result<(), Error> {
     let output = File::create("pixar.ppm")?;
@@ -35,30 +39,37 @@ fn main() -> Result<(), Error> {
     };
 
     file.write_all(format!("P6 {} {} 255 ", w as u32, h as u32).as_bytes())?;
-    for y in (0..h as i32).rev() {
-        for x in (0..w as i32).rev() {
-            let mut color = Vec3d::default();
-            for _ in (0..samples_count as i32).rev() {
-                color = color
-                    + trace(
-                        position,
-                        !(goal
-                            + left * (x as f32 - w / 2.0 + random_val())
-                            + up * (y as f32 - h / 2.0 + random_val())),
-                    );
-            }
-            // Reinhard tone mapping
-            color = color * (1.0 / samples_count) + 14.0 / 241.0;
-            let o = color + 1.0;
-            color = Vec3d {
-                x: color.x / o.x,
-                y: color.y / o.y,
-                z: color.z / o.z,
-            } * 255.0;
 
-            file.write_all(&[color.x as u8, color.y as u8, color.z as u8])?;
+    let mut pixels = Vec::<(f32, f32)>::with_capacity(h as usize * w as usize);
+    for y in (0..h as u32).rev() {
+        for x in (0..w as u32).rev() {
+            pixels.push((x as f32, y as f32));
         }
-        file.flush()?;
     }
+
+    let bytes: Vec<u8> = pixels.iter().flat_map(|(x, y)| {
+        let mut color = Vec3d::default();
+        for _ in (0..samples_count as i32).rev() {
+            color = color
+                + trace(
+                position,
+                !(goal
+                    + left * (*x as f32 - w / 2.0 + random_val())
+                    + up * (*y as f32 - h / 2.0 + random_val())),
+            );
+        }
+        // Reinhard tone mapping
+        color = color * (1.0 / samples_count) + 14.0 / 241.0;
+        let o = color + 1.0;
+        color = Vec3d {
+            x: color.x / o.x,
+            y: color.y / o.y,
+            z: color.z / o.z,
+        } * 255.0;
+        vec![color.x as u8, color.y as u8, color.z as u8]
+    }).collect();
+
+    file.write_all(&bytes)?;
+    file.flush()?;
     Ok(())
 } // Andrew Kensler

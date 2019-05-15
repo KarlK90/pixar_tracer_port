@@ -53,6 +53,18 @@ lazy_static! {
         })
         .collect()
     };
+    static ref CURVES : [Vec3d;2] = [
+        Vec3d {
+            x: -11.0,
+            y: 6.0,
+            z: 0.0,
+        },
+        Vec3d {
+            x: 11.0,
+            y: 6.0,
+            z: 0.0,
+        },
+    ];
 }
 
 // Sample the world using Signed Distance Fields.
@@ -79,32 +91,13 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
     distance = distance.sqrt(); // Get real distance, not square distance.
 
     // Two curves (for P and R in PixaR) with hard-coded locations.
-    let curves = [
-        Vec3d {
-            x: -11.0,
-            y: 6.0,
-            z: 0.0,
-        },
-        Vec3d {
-            x: 11.0,
-            y: 6.0,
-            z: 0.0,
-        },
-    ];
-
-    for curve in curves.into_iter().rev() {
-        let mut o: Vec3d = f - *curve;
+    for curve in CURVES.iter().rev() {
+        let o = f - *curve;
         let cmp = if o.x > 0.0 {
             ((o % o).sqrt() - 2.0).abs()
         } else {
-            if o.y > 0.0 {
-                o.y += -2.0
-            } else {
-                o.y += 2.0
-            }
             (o % o).sqrt()
         };
-
         distance = min(distance, cmp);
     }
 
@@ -147,7 +140,7 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
         box_test(
             // Ceiling "planks" spaced 8 units apart.
             Vec3d {
-                x: mod_(position.x.abs(), 8.0),
+                x: fmodf(position.x.abs(), 8.0),
                 ..position
             },
             Vec3d {
@@ -309,10 +302,6 @@ fn min<T: PartialOrd>(l: T, r: T) -> T {
     }
 }
 
-fn mod_<T: PartialOrd + Sub<Output = T> + Copy>(a: T, b: T) -> T {
-    if a >= b {
-        mod_(a - b, b)
-    } else {
-        a
-    }
+fn fmodf(a: f32, b: f32) -> f32 {
+    a % b
 }
