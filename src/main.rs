@@ -47,7 +47,7 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    let bytes: Vec<u8> = pixels.iter().flat_map(|(x, y)| {
+    let bytes: Vec<u8> = pixels.par_iter().flat_map(|(x, y)| {
         let mut color = Vec3d::default();
         for _ in (0..samples_count as i32).rev() {
             color = color
