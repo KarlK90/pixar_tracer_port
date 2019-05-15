@@ -10,7 +10,6 @@ pub struct Vec3d {
 }
 
 impl Vec3d {
-    #[inline(always)]
     pub const fn new(x: f32, y: f32, z: f32) -> Vec3d {
         Vec3d { x, y, z }
     }

@@ -1,5 +1,3 @@
-use std::ops::Sub;
-
 use super::vector::Vec3d;
 
 pub fn random_val() -> f32 {
@@ -92,10 +90,15 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
 
     // Two curves (for P and R in PixaR) with hard-coded locations.
     for curve in CURVES.iter().rev() {
-        let o = f - *curve;
+        let mut o = f - *curve;
         let cmp = if o.x > 0.0 {
             ((o % o).sqrt() - 2.0).abs()
         } else {
+            if o.y > 0.0 {
+                o.y += -2.0
+            } else {
+                o.y += 2.0
+            }
             (o % o).sqrt()
         };
         distance = min(distance, cmp);
