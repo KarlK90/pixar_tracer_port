@@ -1,5 +1,6 @@
 use super::vector::Vec3d;
 use rand::random;
+use std::intrinsics::*;
 
 // Rectangle CSG equation. Returns minimum signed distance from
 // space carved by
@@ -304,5 +305,5 @@ fn min<T: PartialOrd>(l: T, r: T) -> T {
 }
 
 fn fmodf(a: f32, b: f32) -> f32 {
-    a % b
+    unsafe { frem_fast(a, b) }
 }

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::Debug;
+use std::intrinsics::*;
 use std::ops::{Add, Mul, Not, Rem, Sub};
-
 #[derive(Copy, Clone, Default)]
 pub struct Vec3d {
     pub x: f32,
@@ -24,10 +24,12 @@ impl Debug for Vec3d {
 impl Add<Vec3d> for Vec3d {
     type Output = Vec3d;
     fn add(self, other: Vec3d) -> Self::Output {
-        Vec3d {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
+        unsafe {
+            Vec3d {
+                x: fadd_fast(self.x, other.x),
+                y: fadd_fast(self.y, other.y),
+                z: fadd_fast(self.z, other.z),
+            }
         }
     }
 }
@@ -35,10 +37,12 @@ impl Add<Vec3d> for Vec3d {
 impl Add<f32> for Vec3d {
     type Output = Vec3d;
     fn add(self, other: f32) -> Self::Output {
-        Vec3d {
-            x: self.x + other,
-            y: self.y + other,
-            z: self.z + other,
+        unsafe {
+            Vec3d {
+                x: fadd_fast(self.x, other),
+                y: fadd_fast(self.y, other),
+                z: fadd_fast(self.z, other),
+            }
         }
     }
 }
@@ -46,10 +50,12 @@ impl Add<f32> for Vec3d {
 impl Sub<Vec3d> for Vec3d {
     type Output = Vec3d;
     fn sub(self, other: Self) -> Self::Output {
-        Vec3d {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
+        unsafe {
+            Vec3d {
+                x: fsub_fast(self.x, other.x),
+                y: fsub_fast(self.y, other.y),
+                z: fsub_fast(self.z, other.z),
+            }
         }
     }
 }
@@ -57,10 +63,12 @@ impl Sub<Vec3d> for Vec3d {
 impl Mul<Vec3d> for Vec3d {
     type Output = Vec3d;
     fn mul(self, other: Vec3d) -> Self::Output {
-        Vec3d {
-            x: self.x * other.x,
-            y: self.y * other.y,
-            z: self.z * other.z,
+        unsafe {
+            Vec3d {
+                x: fmul_fast(self.x, other.x),
+                y: fmul_fast(self.y, other.y),
+                z: fmul_fast(self.z, other.z),
+            }
         }
     }
 }
@@ -68,10 +76,12 @@ impl Mul<Vec3d> for Vec3d {
 impl Mul<f32> for Vec3d {
     type Output = Vec3d;
     fn mul(self, other: f32) -> Self::Output {
-        Vec3d {
-            x: self.x * other,
-            y: self.y * other,
-            z: self.z * other,
+        unsafe {
+            Vec3d {
+                x: fmul_fast(self.x, other),
+                y: fmul_fast(self.y, other),
+                z: fmul_fast(self.z, other),
+            }
         }
     }
 }
@@ -79,7 +89,12 @@ impl Mul<f32> for Vec3d {
 impl Rem for Vec3d {
     type Output = f32;
     fn rem(self, other: Vec3d) -> Self::Output {
-        self.x * other.x + self.y * other.y + self.z * other.z
+        unsafe {
+            fadd_fast(
+                fadd_fast(fmul_fast(self.x, other.x), fmul_fast(self.y, other.y)),
+                fmul_fast(self.z, other.z),
+            )
+        }
     }
 }
 

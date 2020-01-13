@@ -1,6 +1,7 @@
+#![feature(core_intrinsics)]
+
 extern crate pathtracer;
 extern crate rayon;
-
 use std::fs::File;
 use std::io::{BufWriter, Error, Write};
 use rand::random;
