@@ -17,7 +17,7 @@ opt-level = 3
 lto = true
 
 [dev-dependencies]
-criterion = "0.2"
+criterion = "0.3"
 
 [[bench]]
 name = "bench"

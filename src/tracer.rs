@@ -85,25 +85,31 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
         let o = f - (begin + e * min(-min((begin - f) % e / (e % e), 0.0), 1.0));
         distance = min(distance, o % o); // compare squared distance.
     }
-    distance = distance.sqrt(); // Get real distance, not square distance.
+    distance = unsafe { sqrtf32(distance) }; // Get real distance, not square distance.
 
     // Two curves (for P and R in PixaR) with hard-coded locations.
     for curve in CURVES.iter().rev() {
-        let mut o = f - *curve;
-        let cmp = if o.x > 0.0 {
-            ((o % o).sqrt() - 2.0).abs()
-        } else {
-            if o.y > 0.0 {
-                o.y += -2.0
+        unsafe {
+            let mut o = f - *curve;
+            let cmp = if o.x > 0.0 {
+                ((o % o).sqrt() - 2.0).abs()
             } else {
-                o.y += 2.0
-            }
-            (o % o).sqrt()
-        };
-        distance = min(distance, cmp);
+                if o.y > 0.0 {
+                    o.y += -2.0
+                } else {
+                    o.y += 2.0
+                }
+                sqrtf32(o % o)
+            };
+            distance = min(distance, cmp);
+        }
     }
-
-    distance = (distance.powf(8.0) + position.z.powf(8.0)).powf(0.125) - 0.5;
+    unsafe {
+        distance = fsub_fast(
+            (fadd_fast(distance.powi(8), position.z.powi(8))).powf(0.125),
+            0.5,
+        );
+    }
     hit_type = Hit::Letter;
 
     let room_dist = min(
@@ -142,7 +148,7 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
         box_test(
             // Ceiling "planks" spaced 8 units apart.
             Vec3d {
-                x: fmodf(position.x.abs(), 8.0),
+                x: (position.x.abs() % 8.0),
                 ..position
             },
             Vec3d {
@@ -302,8 +308,4 @@ fn min<T: PartialOrd>(l: T, r: T) -> T {
     } else {
         r
     }
-}
-
-fn fmodf(a: f32, b: f32) -> f32 {
-    unsafe { frem_fast(a, b) }
 }
