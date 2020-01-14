@@ -5,7 +5,6 @@ use std::intrinsics::*;
 // Rectangle CSG equation. Returns minimum signed distance from
 // space carved by
 // lower_left vertex and opposite rectangle vertex upper_right.
-#[inline]
 pub fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
     let lower_left = position - lower_left;
     let upper_right = upper_right - position;
@@ -295,6 +294,7 @@ pub fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
     color
 }
 
+#[inline]
 fn min<T: PartialOrd>(l: T, r: T) -> T {
     if l < r {
         l
