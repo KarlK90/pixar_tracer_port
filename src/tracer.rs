@@ -27,7 +27,7 @@ pub enum Hit {
 }
 
 lazy_static! {
-    static ref LETTERS : Vec<(i32, i32, i32, i32)> =
+    static ref LETTERS : Vec<(Vec3d, Vec3d, f32)> =
     {
         [
             // 15 two points lines
@@ -47,8 +47,11 @@ lazy_static! {
                 s[2] as i32 - 79,
                 s[3] as i32 - 79,
             )
-        })
-        .collect()
+        }).map(|(a,b,c,d)|{
+            let begin = Vec3d::new(a as f32, b as f32, 0.0) * 0.5;
+            let e = Vec3d::new(c as f32, d as f32, 0.0) * 0.5 - begin;
+            (begin, e, e % e)
+        }).collect()
     };
     static ref CURVES : [Vec3d;2] = [
         Vec3d {
@@ -70,19 +73,9 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
     let mut distance = 1e9_f32;
     let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)
 
-    for (a, b, c, d) in LETTERS.iter() {
-        let begin = Vec3d {
-            x: *a as f32,
-            y: *b as f32,
-            z: 0.0,
-        } * 0.5;
-        let e = Vec3d {
-            x: *c as f32,
-            y: *d as f32,
-            z: 0.0,
-        } * 0.5
-            - begin;
-        let o = f - (begin + e * min(-min((begin - f) % e / (e % e), 0.0), 1.0));
+    for (begin, e, e_mod_e) in LETTERS.iter() {
+        let o_1 = -min((*begin - f) % *e / (e_mod_e), 0.0);
+        let o = f - (*begin + *e * min(o_1, 1.0));
         distance = min(distance, o % o); // compare squared distance.
     }
     distance = unsafe { sqrtf32(distance) }; // Get real distance, not square distance.

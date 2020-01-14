@@ -2,9 +2,9 @@
 
 extern crate pathtracer;
 extern crate rayon;
+use rand::random;
 use std::fs::File;
 use std::io::{BufWriter, Error, Write};
-use rand::random;
 
 use rayon::prelude::*;
 
@@ -13,9 +13,9 @@ use pathtracer::{trace, Vec3d};
 fn main() -> Result<(), Error> {
     let output = File::create("pixar.ppm")?;
     let mut file = BufWriter::new(output);
-    let w = 960.0;
-    let h = 540.0;
-    let samples_count = 16.0;
+    let w = 960;
+    let h = 540;
+    let samples_count = 8;
 
     let position = Vec3d {
         x: -22.0,
@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         x: goal.z,
         y: 0.0,
         z: -goal.x,
-    } * ((1.0 / w) as f32);
+    } * ((1.0 / w as f32) as f32);
 
     // Cross-product to get the up vector
     let up = Vec3d {
@@ -55,14 +55,14 @@ fn main() -> Result<(), Error> {
             for _ in (0..samples_count as i32).rev() {
                 color = color
                     + trace(
-                    position,
-                    !(goal
-                        + left * (x - w / 2.0 + random::<f32>())
-                        + up * (y - h / 2.0 + random::<f32>())),
-                );
+                        position,
+                        !(goal
+                            + left * (x - w as f32 / 2.0 + random::<f32>())
+                            + up * (y - h as f32 / 2.0 + random::<f32>())),
+                    );
             }
             // Reinhard tone mapping
-            color = color * (1.0 / samples_count) + 14.0 / 241.0;
+            color = color * (1.0 / samples_count as f32) + 14.0 / 241.0;
             let o = color + 1.0;
             color = Vec3d {
                 x: color.x / o.x,
