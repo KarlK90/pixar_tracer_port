@@ -17,28 +17,16 @@ fn main() -> Result<(), Error> {
     let h = 540;
     let samples_count = 8;
 
-    let position = Vec3d {
-        x: -22.0,
-        y: 5.0,
-        z: 25.0,
-    };
-    let goal = !(Vec3d {
-        x: -3.0,
-        y: 4.0,
-        z: 0.0,
-    } - position);
-    let left = !Vec3d {
-        x: goal.z,
-        y: 0.0,
-        z: -goal.x,
-    } * ((1.0 / w as f32) as f32);
+    let position = Vec3d::new(-22.0, 5.0, 25.0);
+    let goal = !(Vec3d::new(-3.0, 4.0, 0.0) - position);
+    let left = !Vec3d::new(goal.get_z(), 0.0, -goal.get_x()) * ((1.0 / w as f32) as f32);
 
     // Cross-product to get the up vector
-    let up = Vec3d {
-        x: goal.y * left.z - goal.z * left.y,
-        y: goal.z * left.x - goal.x * left.z,
-        z: goal.x * left.y - goal.y * left.x,
-    };
+    let up = Vec3d::new(
+        goal.get_y() * left.get_z() - goal.get_z() * left.get_y(),
+        goal.get_z() * left.get_x() - goal.get_x() * left.get_z(),
+        goal.get_x() * left.get_y() - goal.get_y() * left.get_x(),
+    );
 
     file.write_all(format!("P6 {} {} 255 ", w as u32, h as u32).as_bytes())?;
 
@@ -63,15 +51,12 @@ fn main() -> Result<(), Error> {
             }
             // Reinhard tone mapping
             color = color * (1.0 / samples_count as f32) + 14.0 / 241.0;
-            let o = color + 1.0;
-            color = Vec3d {
-                x: color.x / o.x,
-                y: color.y / o.y,
-                z: color.z / o.z,
-            } * 255.0;
-            rgb[0] = color.x as u8;
-            rgb[1] = color.y as u8;
-            rgb[2] = color.z as u8;
+            let o  = color + 1.0_f32;
+            color = (color / o) * 255.0;
+            //            color = Vec3d::new(color.get_x() / o.get_x(), color.get_y() / o.y, color.z / o.z) * 255.0;
+            rgb[0] = color.get_x() as u8;
+            rgb[1] = color.get_y() as u8;
+            rgb[2] = color.get_z() as u8;
         });
     file.write_all(&pixels)?;
     file.flush()?;

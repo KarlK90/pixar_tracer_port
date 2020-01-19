@@ -9,13 +9,7 @@ use pathtracer::{box_test, query_database, ray_marching, trace, Vec3d};
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("query_database-lazy", |b| {
-        b.iter(|| {
-            query_database(black_box(Vec3d {
-                x: -22.0,
-                y: 5.0,
-                z: 25.0,
-            }))
-        })
+        b.iter(|| query_database(black_box(Vec3d::new(-22.0, 5.0, 25.0))))
     });
     c.bench_function("trace", |b| {
         b.iter(|| {

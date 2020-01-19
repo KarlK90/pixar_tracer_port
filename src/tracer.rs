@@ -8,13 +8,7 @@ use std::intrinsics::*;
 pub fn box_test(position: Vec3d, lower_left: Vec3d, upper_right: Vec3d) -> f32 {
     let lower_left = position - lower_left;
     let upper_right = upper_right - position;
-    -min(
-        min(
-            min(lower_left.x, upper_right.x),
-            min(lower_left.y, upper_right.y),
-        ),
-        min(lower_left.z, upper_right.z),
-    )
+    -(lower_left.min(upper_right).min_element())
 }
 
 #[derive(PartialEq, Debug)]
@@ -53,16 +47,16 @@ lazy_static! {
         }).collect()
     };
     static ref CURVES : [Vec3d;2] = [
-        Vec3d {
-            x: -11.0,
-            y: 6.0,
-            z: 0.0,
-        },
-        Vec3d {
-            x: 11.0,
-            y: 6.0,
-            z: 0.0,
-        },
+        Vec3d::new (
+            -11.0,
+            6.0,
+            0.0,
+        ),
+        Vec3d::new (
+             11.0,
+             6.0,
+             0.0,
+  ),
     ];
 }
 
@@ -70,7 +64,7 @@ lazy_static! {
 pub fn query_database(position: Vec3d) -> (f32, Hit) {
     let mut hit_type: Hit;
     let mut distance = 1e9_f32;
-    let f = Vec3d { z: 0.0, ..position }; // Flattened position (z=0)
+    let f = Vec3d::new(position.get_x(), position.get_y(), 0.0); // Flattened position (z=0)
 
     for (begin, e, e_mod_e) in LETTERS.iter() {
         let o_1 = -min((*begin - f) % *e / (e_mod_e), 0.0);
@@ -83,13 +77,13 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
     for curve in CURVES.iter().rev() {
         unsafe {
             let mut o = f - *curve;
-            let cmp = if o.x > 0.0 {
+            let cmp = if o.get_x() > 0.0 {
                 ((o % o).sqrt() - 2.0).abs()
             } else {
-                if o.y > 0.0 {
-                    o.y += -2.0
+                if o.get_y() > 0.0 {
+                    o.set_y(o.get_y() + -2.0)
                 } else {
-                    o.y += 2.0
+                    o.set_y(o.get_y() + 2.0)
                 }
                 sqrtf32(o % o)
             };
@@ -98,7 +92,7 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
     }
     unsafe {
         distance = fsub_fast(
-            (fadd_fast(distance.powi(8), position.z.powi(8))).powf(0.125),
+            (fadd_fast(distance.powi(8), position.get_z().powi(8))).powf(0.125),
             0.5,
         );
     }
@@ -111,48 +105,25 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
             // Lower room
             box_test(
                 position,
-                Vec3d {
-                    x: -30.0,
-                    y: -0.5,
-                    z: -30.0,
-                },
-                Vec3d {
-                    x: 30.0,
-                    y: 18.0,
-                    z: 30.0,
-                },
+                Vec3d::new(-30.0, -0.5, -30.0),
+                Vec3d::new(30.0, 18.0, 30.0),
             ),
             // Upper room
             box_test(
                 position,
-                Vec3d {
-                    x: -25.0,
-                    y: 17.0,
-                    z: -25.0,
-                },
-                Vec3d {
-                    x: 25.0,
-                    y: 20.0,
-                    z: 25.0,
-                },
+                Vec3d::new(-25.0, 17.0, -25.0),
+                Vec3d::new(25.0, 20.0, 25.0),
             ),
         ),
         box_test(
             // Ceiling "planks" spaced 8 units apart.
-            Vec3d {
-                x: (position.x.abs() % 8.0),
-                ..position
-            },
-            Vec3d {
-                x: 1.5,
-                y: 18.5,
-                z: -25.0,
-            },
-            Vec3d {
-                x: 6.5,
-                y: 20.0,
-                z: 25.0,
-            },
+            Vec3d::new(
+                position.get_x().abs() % 8.0,
+                position.get_y(),
+                position.get_z(),
+            ),
+            Vec3d::new(1.5, 18.5, -25.0),
+            Vec3d::new(6.5, 20.0, 25.0),
         ),
     );
 
@@ -161,7 +132,7 @@ pub fn query_database(position: Vec3d) -> (f32, Hit) {
         hit_type = Hit::Wall;
     }
 
-    let sun = 19.9 - position.y; // Everything above 19.9 is light source.
+    let sun = 19.9 - position.get_y(); // Everything above 19.9 is light source.
     if sun < distance {
         distance = sun;
         hit_type = Hit::Sun;
@@ -184,35 +155,11 @@ pub fn ray_marching(origin: Vec3d, direction: Vec3d, mut hit_norm: Vec3d) -> (Hi
 
         no_hit_count += 1;
         if d < 0.01 || no_hit_count > 99 {
-            hit_norm = !Vec3d {
-                x: query_database(
-                    hit_pos
-                        + Vec3d {
-                            x: 0.01,
-                            y: 0.0,
-                            z: 0.0,
-                        },
-                )
-                .0 - d,
-                y: query_database(
-                    hit_pos
-                        + Vec3d {
-                            x: 0.0,
-                            y: 0.01,
-                            z: 0.0,
-                        },
-                )
-                .0 - d,
-                z: query_database(
-                    hit_pos
-                        + Vec3d {
-                            x: 0.0,
-                            y: 0.0,
-                            z: 0.01,
-                        },
-                )
-                .0 - d,
-            };
+            hit_norm = !Vec3d::new(
+                query_database(hit_pos + Vec3d::new(0.01, 0.0, 0.0)).0 - d,
+                query_database(hit_pos + Vec3d::new(0.0, 0.01, 0.0)).0 - d,
+                query_database(hit_pos + Vec3d::new(0.0, 0.0, 0.01)).0 - d,
+            );
 
             return (hit_type, hit_norm, hit_pos);
         }
@@ -226,11 +173,7 @@ pub fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
     let normal: Vec3d = Default::default();
     let mut color: Vec3d = Default::default();
     let mut attenuation = Vec3d::new(1.0, 1.0, 1.0);
-    let light_direction = !Vec3d {
-        x: 0.6,
-        y: 0.6,
-        z: 1.0,
-    }; // Directional light
+    let light_direction = !Vec3d::new(0.6, 0.6, 1.0); // Directional light
 
     for _ in 0..3 {
         // Number of bounces
@@ -249,19 +192,16 @@ pub fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
                 let p = 6.283_185 * random::<f32>();
                 let c = random::<f32>();
                 let s = f32::sqrt(1.0 - c);
-                let g = if normal.z < 0.0 { -1.0 } else { 1.0 };
-                let u = -1.0 / (g + normal.z);
-                let v = normal.x * normal.y * u;
-                direction = Vec3d {
-                    x: v,
-                    y: g + normal.y * normal.y * u,
-                    z: -normal.y,
-                } * (f32::cos(p) * s)
-                    + Vec3d {
-                        x: 1.0 + g * normal.x * normal.x * u,
-                        y: g * v,
-                        z: -g * normal.x,
-                    } * (f32::sin(p) * s)
+                let g = if normal.get_z() < 0.0 { -1.0 } else { 1.0 };
+                let u = -1.0 / (g + normal.get_z());
+                let v = normal.get_x() * normal.get_y() * u;
+                direction = Vec3d::new(v, g + normal.get_y() * normal.get_y() * u, -normal.get_y())
+                    * (f32::cos(p) * s)
+                    + Vec3d::new(
+                        1.0 + g * normal.get_x() * normal.get_x() * u,
+                        g * v,
+                        -g * normal.get_x(),
+                    ) * (f32::sin(p) * s)
                     + normal * c.sqrt();
                 origin = sampled_position + direction * 0.1;
                 attenuation = attenuation * 0.2;
@@ -269,24 +209,11 @@ pub fn trace(mut origin: Vec3d, mut direction: Vec3d) -> Vec3d {
                     && ray_marching(sampled_position + normal * 0.1, light_direction, normal).0
                         == Hit::Sun
                 {
-                    color = color
-                        + attenuation
-                            * Vec3d {
-                                x: 500.0,
-                                y: 400.0,
-                                z: 100.0,
-                            }
-                            * incidence;
+                    color = color + attenuation * Vec3d::new(500.0, 400.0, 100.0) * incidence;
                 }
             }
             Hit::Sun => {
-                color = color
-                    + attenuation
-                        * Vec3d {
-                            x: 50.0,
-                            y: 80.0,
-                            z: 100.0,
-                        };
+                color = color + attenuation * Vec3d::new(50.0, 80.0, 100.0);
                 break; // Sun Color
             }
         }
